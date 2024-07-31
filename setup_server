@@ -246,3 +246,4 @@ EOF
 systemctl daemon-reload
 systemctl enable laravel-app.service
 systemctl enable laravel-redis.service
+systemctl enable redis-server
