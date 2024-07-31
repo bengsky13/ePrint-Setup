@@ -43,7 +43,7 @@ cd e-Print
 # Install necessary packages
 apt-get update -y
 apt-get install -y apache2 mysql-server php-cli php-mysql redis-server composer php-gd php-xml php-curl
-composer install
+sudo -u bengsky composer install
 mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$password'; FLUSH PRIVILEGES;"
 echo 'yes' | php artisan migrate
 cat << EOF > /etc/apache2/sites-available/eprint.conf
