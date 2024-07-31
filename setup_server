@@ -1,0 +1,248 @@
+#!/bin/bash
+
+# Function to print an error message and exit
+function print_error_and_exit {
+  echo "$1"
+  exit 1
+}
+
+# Ensure the script is run as root
+if [ "$EUID" -ne 0 ]; then
+  print_error_and_exit "Please run the setup as sudo example: sudo bash ./setup_server --key API_KEY --passwword DB_PASSWORD"
+fi
+
+# Parse command line arguments for the DB Password and API key
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --key)
+      key="$2"
+      shift 2
+      ;;
+    --password)
+      password="$2"
+      shift 2
+      ;;
+    *)
+      print_error_and_exit "Unknown argument: $1"
+      ;;
+  esac
+done
+
+# Check if the API key is provided
+if [ -z "$password" ]; then
+  print_error_and_exit "The DB Password is required. --password DB_PASSWORD"
+fi
+if [ -z "$key" ]; then
+  print_error_and_exit "The Midtrans API Key is required. --key API_KEY"
+fi
+
+
+# Cloning repository
+sudo -u bengsky git clone https://github.com/bengsky13/e-Print
+cd e-Print
+# Install necessary packages
+apt-get update -y
+apt-get install -y apache2 mysql php-cli php-mysql redis-server composer php-gd php-xml
+composer install
+mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$password'; FLUSH PRIVILEGES;"
+echo 'yes' | php artisan migrate
+cat << EOF > /etc/apache2/sites-available/eprint.conf
+<VirtualHost *:80>
+    ServerName eprints.id
+
+    # Redirect all HTTP requests to HTTPS
+    Redirect permanent / https://eprints.id/
+</VirtualHost>
+
+EOF
+cat << EOF > /etc/apache2/sites-available/eprint-ssl.conf
+<VirtualHost *:443>
+    ServerName eprints.id
+
+    # Enable SSL
+    SSLEngine on
+    SSLCertificateFile /home/bengsky/eprint.pem
+    SSLCertificateKeyFile /home/bengsky/eprint.key
+
+    # Proxy configuration
+    ProxyPreserveHost On
+    ProxyPass / http://localhost:8000/
+    ProxyPassReverse / http://localhost:8000/
+</VirtualHost>
+
+EOF
+cat << EOF > /home/bengsky/eprint.pem
+-----BEGIN CERTIFICATE-----
+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
+efSK5vOVVw==
+-----END CERTIFICATE-----
+EOF
+cat << EOF > /home/bengsky/eprint.key
+-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAsyOlxfaoM4XQHAE7HdlzbVXFTX11s0n3aWI9zigrxlUPJihR
+S9Bgvih321r8U82n8hGxoAJEm1JZ7vWN2tnJj/Rpt2g8z4Wgi0SLVXWwSbYlrpyi
+CcDIWjDzHVVJfVlnzuak30AiErKY+nC6T9IV05WwG78ypmsgIo51xmQRS5gVCjqo
+xd8Uu7aJur8rqMhs8VTYOdj16rL2vhvXS03Hb8GIIZenDaQfENxijRp8Mtf/+aOl
+01RdQhWFj08bbnfQr4QcrL020I4FrZ8UV5WNVxk0BcqRNBZ/MUkkTTMejAMqhi1W
+DoDAaNpZ+aMSP6pE7Y7MKjYsBlP5FDdQYd6zoQIDAQABAoIBAEC6IKvm89+p+ggk
+abffWlWnKCNXsa+Wik8JsEtNOIPxOAgRiU5bfJk5BhW8Sm/9XzGYMxYdu6xjlRtC
+nn71Ml9RcOFUSKSzI88udSnr3EbGCdeNwP7FKZ9tEGsI5gTkyR15ORlxkt4uqhfT
+o34z6q8I5xkffK2lB3d1AhktDxLAxD5mfpExcZdV4XA0f4mfvv0KvSqPA5rev2YC
+KBiyf/9yrnajxhJcopYdoJMpqRfYIRlNvSqGSIf06jFdqLPro1CMaoGHh3TADj2V
+lrH66b5rozv0zZY02pvSypy3CvsjdLAZUiHqhsR1oIy7J1Kb5hBtegNOa8mXLkQl
+mHNYkgECgYEA+erFN6t2AWwTWYMnlCVw8xS3c6R5aOnMqPZ3AfR9VVT2FyasEBit
+fgrm/b3I10xtmKjG1HSVfVLp/cLybZBMv9GoKbqnEKFzfqagaB4BF2H5EPhf81Pb
+q3gh2HDcyiFbSEpzqaeZ7EamMcGD2n12prm1myHiTaNYfG06E4Fzzw8CgYEAt3/c
+kQUieOyduzi9IThHeCqxhTfWDqBa8xcx06o+4aaza7Cw0H2VMRR8adFIsKVdVXvy
+BgmbCUs4Il5ELl6j5VGUvNPLU+ObL9/cjQIJyF1evDlwDHWm7SSZCwBMNtCNxEVC
+pNe3VxXJ5cWpCI+ooH2rae6i7VlDiB54xvxBUk8CgYA2QLvteOBWMLMGpI0sAPDD
+JEUq6pKcrtyJ9W8iUoP+yUHfBrslh2XqTc2VWeTGsEW+dS0so95r5Vr8hpyAImo2
+3fmmjWmFF7dt0BhUYecUv2UFRRX3ScYPNDYMuXuEubcKO3deZg7pFvEvLfZEsSXX
+zcrZ0YJCHmqwIDoST/DnCwKBgQCuIYC+gX/f/rIDi2k2kACKUQFaqMzR3mvQSQ94
+jBLV8WpL5EU15CZih800YWy4bIQwbckS36Sm4iFnw8qxsg+Xup4JvnYxqkiG2smh
+afC8mZYfyeXBfRgl69frb6HjVm9hdFQ0t5v84OlRyQuJ20Gq4vZ6NQGZeF60Wi5E
+rfaS0wKBgEQdE+Wi3xM+ZuNoi7Mnno1uWk7YGyVlPppg9l4DDAzkseu2mE6qALUV
+46f5nQAK6753dcF9wzmO6jo5VuyJ2Q7bbzpHnfvrxmgTSeItmceVxgBMHFT0kPdC
+1og9Iy5zAPKr1x9vLgqsipuJxPl5g0ONOCXLkeP5QMZwY1UZ3LJ+
+-----END RSA PRIVATE KEY-----
+EOF
+a2enmod ssl
+a2enmod proxy
+a2enmod proxy_http
+a2ensite eprint.conf
+a2ensite eprint-ssl.conf
+systemctl restart apache2
+# Create a env file
+cwd=$(pwd)
+cat << EOF > .env
+APP_NAME=ePrint
+APP_ENV=local
+APP_KEY=base64:odCGN4BR2rulSdDrzIpqWvQXSRmZLSh/6c6svwSZU0s=
+APP_DEBUG=true
+APP_URL=https://eprints.id
+
+LOG_CHANNEL=stack
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=debug
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=ePrint
+DB_USERNAME=root
+DB_PASSWORD=$password
+
+BROADCAST_DRIVER=log
+CACHE_DRIVER=file
+FILESYSTEM_DISK=local
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=file
+SESSION_LIFETIME=120
+
+MEMCACHED_HOST=127.0.0.1
+
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+MAIL_MAILER=smtp
+MAIL_HOST=mailpit
+MAIL_PORT=1025
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_ENCRYPTION=null
+MAIL_FROM_ADDRESS="hello@example.com"
+MAIL_FROM_NAME="mail-from"
+
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=
+AWS_USE_PATH_STYLE_ENDPOINT=false
+
+PUSHER_APP_ID=
+PUSHER_APP_KEY=
+PUSHER_APP_SECRET=
+PUSHER_HOST=
+PUSHER_PORT=443
+PUSHER_SCHEME=https
+PUSHER_APP_CLUSTER=mt1
+
+VITE_PUSHER_APP_KEY="${PUSHER_APP_KEY}"
+VITE_PUSHER_HOST="${PUSHER_HOST}"
+VITE_PUSHER_PORT="${PUSHER_PORT}"
+VITE_PUSHER_SCHEME="${PUSHER_SCHEME}"
+VITE_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"
+
+MIDTRANS_PROD=true
+MIDTRANS_SECRET=$key
+EOF
+
+cat << EOF > /etc/systemd/system/laravel-app.service
+[Unit]
+Description=Laravel Application
+After=network.target
+
+[Service]
+Type=simple
+User=bengsky
+WorkingDirectory=/home/bengsky/e-Print
+ExecStart=/usr/bin/php $cwd/artisan serve --host=0.0.0.0 --port=8000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+EOF
+cat << EOF > /etc/systemd/system/laravel-redis.service
+[Unit]
+Description=Laravel Application
+After=network.target
+
+[Service]
+Type=simple
+User=bengsky
+WorkingDirectory=/home/bengsky/e-Print
+ExecStart=/usr/bin/php $cwd/artisan queue:work 
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+EOF
+systemctl daemon-reload
+systemctl enable laravel-app.service
+systemctl enable laravel-redis.service

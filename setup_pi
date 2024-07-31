@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# Function to print an error message and exit
+function print_error_and_exit {
+  echo "$1"
+  exit 1
+}
+
+# Ensure the script is run as root
+if [ "$EUID" -ne 0 ]; then
+  print_error_and_exit "Please run the setup as sudo example: sudo bash setup.sh --key API_KEY"
+fi
+
+# Parse command line arguments for the API key
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --key)
+      key="$2"
+      shift 2
+      ;;
+    *)
+      print_error_and_exit "Unknown argument: $1"
+      ;;
+  esac
+done
+
+# Check if the API key is provided
+if [ -z "$key" ]; then
+  print_error_and_exit "The API key is required. Usage: sudo ./setup_pi --key API_KEY"
+fi
+
+# Verify the API key
+status_code=$(curl -s -o /dev/null -w "%{http_code}" -H "X-API-KEY:$key" --insecure "https://eprints.id/api/VERIFY/status")
+if [ "$status_code" -eq 401 ]; then
+  print_error_and_exit "Invalid API KEY"
+fi
+
+# Cloning repository
+sudo -u pi git clone https://github.com/bengsky13/ePrint-Machine
+cd ePrint-Machine
+# Install necessary packages
+apt-get update -y
+apt-get install -y unclutter || print_error_and_exit "Failed to install unclutter"
+
+# Install Python dependencies
+sudo -u pi pip install --user --break-system-packages -r requirements.txt || print_error_and_exit "Failed to install Python dependencies"
+
+# Create a run script
+cwd=$(pwd)
+sudo -u pi cat << EOF > run.sh
+#!/bin/bash
+export EPRINT_API_KEY="$key"
+cd $cwd
+python3 app.py &
+sleep 10
+chromium-browser --start-fullscreen --force-device-scale-factor=3 --app=http://localhost:5000
+EOF
+
+chmod +x run.sh
+
+# Add commands to autostart
+autostart_file="/etc/xdg/lxsession/LXDE-pi/autostart"
+{
+  echo "@unclutter -idle 0"
+  echo "@$cwd/run.sh"
+} >> "$autostart_file"
+
+echo "Successfully set up"
+echo "Now you can try to reboot"
