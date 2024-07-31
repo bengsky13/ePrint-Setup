@@ -42,7 +42,7 @@ sudo -u bengsky git clone https://github.com/bengsky13/e-Print
 cd e-Print
 # Install necessary packages
 apt-get update -y
-apt-get install -y apache2 mysql-server php-cli php-mysql redis-server composer php-gd php-xml php-curl
+apt-get install -y apache2 mysql-server php-cli php-mysql redis-server composer php-gd php-xml php-curl php-redis
 sudo -u bengsky composer install
 mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$password'; FLUSH PRIVILEGES;"
 cat << EOF > .env
