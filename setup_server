@@ -219,7 +219,7 @@ After=network.target
 [Service]
 Type=simple
 User=bengsky
-WorkingDirectory=/home/bengsky/e-Print
+WorkingDirectory=$cwd
 ExecStart=/usr/bin/php $cwd/artisan serve
 Restart=always
 
@@ -235,7 +235,7 @@ After=network.target
 [Service]
 Type=simple
 User=bengsky
-WorkingDirectory=/home/bengsky/e-Print
+WorkingDirectory=$cwd
 ExecStart=/usr/bin/php $cwd/artisan queue:work 
 Restart=always
 
