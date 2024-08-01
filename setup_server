@@ -8,7 +8,7 @@ function print_error_and_exit {
 
 # Ensure the script is run as root
 if [ "$EUID" -ne 0 ]; then
-  print_error_and_exit "Please run the setup as sudo example: sudo bash ./setup_server --key API_KEY --passwword DB_PASSWORD"
+  print_error_and_exit "Please run the setup as sudo example: sudo ./setup_server --key API_KEY --passwword DB_PASSWORD"
 fi
 
 # Parse command line arguments for the DB Password and API key
