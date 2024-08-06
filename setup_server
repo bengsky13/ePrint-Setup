@@ -250,3 +250,6 @@ systemctl daemon-reload
 systemctl enable laravel-app.service
 systemctl enable laravel-redis.service
 systemctl enable redis-server
+
+sed -i 's/upload_max_filesize[0-9= ]\+M/upload_max_filesize = 200M/' /etc/php/*/cli/php.ini
+sed -i 's/post_max_size[0-9= ]\+M/post_max_size = 200M/' /etc/php/*/cli/php.ini
