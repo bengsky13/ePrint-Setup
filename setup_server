@@ -38,12 +38,12 @@ fi
 
 
 # Cloning repository
-sudo -u bengsky git clone https://github.com/bengsky13/e-Print
+sudo -u ubuntu git clone https://github.com/bengsky13/e-Print
 cd e-Print
 # Install necessary packages
 apt-get update -y
 apt-get install -y apache2 mysql-server php-cli php-mysql redis-server composer php-gd php-xml php-curl php-redis imagemagick php-imagick
-sudo -u bengsky composer install
+sudo -u ubuntu composer install
 mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$password'; FLUSH PRIVILEGES;"
 cat << EOF > .env
 APP_NAME=ePrint
@@ -124,8 +124,8 @@ cat << EOF > /etc/apache2/sites-available/eprint-ssl.conf
 
     # Enable SSL
     SSLEngine on
-    SSLCertificateFile /home/bengsky/eprint.pem
-    SSLCertificateKeyFile /home/bengsky/eprint.key
+    SSLCertificateFile /home/ubuntu/eprint.pem
+    SSLCertificateKeyFile /home/ubuntu/eprint.key
 
     # Proxy configuration
     ProxyPreserveHost On
@@ -134,7 +134,7 @@ cat << EOF > /etc/apache2/sites-available/eprint-ssl.conf
 </VirtualHost>
 
 EOF
-cat << EOF > /home/bengsky/eprint.pem
+cat << EOF > /home/ubuntu/eprint.pem
 -----BEGIN CERTIFICATE-----
 MIIGYzCCBEugAwIBAgIQZbfWseTWErhnkQcXmAaaVTANBgkqhkiG9w0BAQwFADBL
 MQswCQYDVQQGEwJBVDEQMA4GA1UEChMHWmVyb1NTTDEqMCgGA1UEAxMhWmVyb1NT
@@ -173,7 +173,7 @@ Vrb+3WcI/TwlmUBkRgsXEMWf+vv3tfQVD9Frkkr7MGY6O67S1d2pBagIuvo4exFC
 efSK5vOVVw==
 -----END CERTIFICATE-----
 EOF
-cat << EOF > /home/bengsky/eprint.key
+cat << EOF > /home/ubuntu/eprint.key
 -----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAsyOlxfaoM4XQHAE7HdlzbVXFTX11s0n3aWI9zigrxlUPJihR
 S9Bgvih321r8U82n8hGxoAJEm1JZ7vWN2tnJj/Rpt2g8z4Wgi0SLVXWwSbYlrpyi
@@ -219,7 +219,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=bengsky
+User=ubuntu
 WorkingDirectory=$cwd
 ExecStart=/usr/bin/php $cwd/artisan serve
 Restart=always
@@ -235,7 +235,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=bengsky
+User=ubuntu
 WorkingDirectory=$cwd
 ExecStart=/usr/bin/php $cwd/artisan queue:work 
 Restart=always
